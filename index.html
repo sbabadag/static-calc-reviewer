@@ -297,9 +297,9 @@
     // Loads: vertical uniform on rafters as equivalent local qy; wind H as lateral nodal loads at eaves (split equally)
     // Rafter elements are index 1 and 2 in 'els'
     // Uniform vertical load wv (kN/m) along rafters -> project to local qy = wv * cos(theta)
-    const qy = wv * Math.cos(theta);
+    const qy = -wv * Math.cos(theta); // project vertical load to local +y (negative = downward)
     [1,2].forEach(ei=>{
-      const m=meta[ei]; const Lm=m.Lm; const q=qy; // fixed-end forces for uniform local q in +y
+      const m=meta[ei]; const Lm=m.Lm; const q=qy; // fixed-end forces for uniform local q in +y (here q is negative)
       const fe_local=[0, q*Lm/2, q*Lm*Lm/12, 0, q*Lm/2, -q*Lm*Lm/12];
       // f_global = T^T * fe_local
       function trans(a){const r=a.length,c=a[0].length;const out=Array.from({length:c},()=>Array(r).fill(0));for(let i=0;i<r;i++)for(let j=0;j<c;j++)out[j][i]=a[i][j];return out;}
@@ -313,7 +313,7 @@
     F[3*3+0] += H/2; // node 3 ux
 
     // Boundary conditions: nodes 0 & 4 fixed
-    const ndof=K.length; // already set
+    // ndof already defined earlier (3*nodes.length); avoid redeclaration
     const restrained=new Set([0,1,2, 12,13,14]);
     const free=[]; for(let i=0;i<ndof;i++) if(!restrained.has(i)) free.push(i);
 
