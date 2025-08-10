@@ -205,7 +205,7 @@
     md.push(`\\[ r = (L/2)\\tan\\theta = ${fmt(out.rise)}\\,\\text{m}, \\quad h_\\text{ridge}=h+r=${fmt(out.h_ridge)}\\,\\text{m} \\]`);
     md.push(`Rafter half length $\\ell = (L/2)/\\cos\\theta = ${fmt(out.rafter)}\\,\\text{m}$`);
     md.push("\n### Loads\n");
-    md.push(`Vertical roof line load along each rafter (acting vertically):\\\n$w_v = (G+Q_s)\\, s\\, \\cos\\theta = ${fmt(inp.G+inp.S)}\\times${fmt(inp.s)}\\times\\cos(${fmt(out.theta_deg)}^\\u{00B0}) = ${fmt(out.wv)}\\,\\text{kN/m}$.`);
+    md.push(`Vertical roof line load along each rafter (acting vertically):\\\n$w_v = (G+Q_s)\\, s\\, \\cos\\theta = ${fmt(inp.G+inp.S)}\\times${fmt(inp.s)}\\times\\cos(${fmt(out.theta_deg)}^{\\\circ}) = ${fmt(out.wv)}\\,\\text{kN/m}$.`);
     md.push(`\nTotal vertical on one frame: $W=(G+Q_s)\\, s\\, L = ${fmt(out.W)}\\,\\text{kN}$.`);
     md.push(`\nWind resultant per frame on wall: $H=q_w\\, h\\, s = ${fmt(out.H)}\\,\\text{kN}$.`);
     return md.join("\n");
@@ -243,10 +243,10 @@
     // Members: [0-1] column, [1-2] rafter, [2-3] rafter, [3-4] column. Fixed bases (0,4).
     // Requires E (GPa), A (cm^2), I (cm^4) for columns & rafters.
     const EcG=toN(Ec)||210, ErG=toN(Er)||210;
-    const Ac=toN(Ac), Ic=toN(Ic), Ar=toN(Ar), Ir=toN(Ir);
-    if(!(Ac>0&&Ic>0&&Ar>0&&Ir>0)){ feaOut.textContent = 'Enter member properties (A, I) to run FEA.'; return; }
+    const Ac_val=toN($('Ac')), Ic_val=toN($('Ic')), Ar_val=toN($('Ar')), Ir_val=toN($('Ir'));
+    if(!(Ac_val>0&&Ic_val>0&&Ar_val>0&&Ir_val>0)){ feaOut.textContent = 'Enter member properties (A, I) to run FEA.'; return; }
     // Convert: GPa->kN/m² (1 GPa=10^6 kN/m²), cm²->m², cm⁴->m⁴
-    const Ecol=EcG*1e6, Era=ErG*1e6, Ac_m=Ac*1e-4, Ic_m=Ic*1e-8, Ar_m=Ar*1e-4, Ir_m=Ir*1e-8;
+    const Ecol=EcG*1e6, Era=ErG*1e6, Ac_m=Ac_val*1e-4, Ic_m=Ic_val*1e-8, Ar_m=Ar_val*1e-4, Ir_m=Ir_val*1e-8;
 
     const rise=(L/2)*Math.tan(theta);
     const nodes=[ [0,0], [0,h], [L/2,h+rise], [L,h], [L,0] ];
