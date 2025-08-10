@@ -271,13 +271,13 @@
     const H=qw*h*s;    // base shear
 
     // Estimate max moment and axial for columns and rafters (simple statics)
-    // Rafter: max moment at midspan (approx): Mmax_r = wv*rafter*rafter/8
-    // Column: max moment at base (approx): Mmax_c = H*h/8 + W*h/(2*L)
-    // Axial: Nmax_c = W/2, Nmax_r = wv*rafter/2
-    const Mmax_r = wv*rafter*rafter/8;
-    const Nmax_r = wv*rafter/2;
-    const Mmax_c = H*h/8 + W*h/(2*L);
-    const Nmax_c = W/2;
+    // Rafter: Mmax_r approx wl^2/8 for vertical loads, plus moment from H
+    // Column: Mmax_c from H and vertical load eccentricity
+    // Axial: Nmax_c = W/2, Nmax_r approx W/2/cos(theta)
+    const Mmax_r = (wv * rafter * rafter / 8) + (H * h / 4);
+    const Nmax_r = (W / 2) / Math.cos(theta);
+    const Mmax_c = (H * h / 2) * 0.7; // Simplified portal method assumption
+    const Nmax_c = W / 2;
     const ipeRaf = suggestIPE(Mmax_r, Nmax_r);
     const ipeCol = suggestIPE(Mmax_c, Nmax_c);
 
