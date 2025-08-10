@@ -157,7 +157,7 @@
     <div class="row">
       <div>
         <label for="worker">Worker URL</label>
-        <input id="worker" placeholder="https://your-subdomain.workers.dev" />
+        <input id="worker" placeholder="https://chatgptstatic.sbabadag.workers.dev/" value="https://chatgptstatic.sbabadag.workers.dev/" />
       </div>
       <div>
         <label for="standard">Preferred standard</label>
@@ -188,7 +188,40 @@
   function fmt(x,u=""){ if(!isFinite(x)) return "–"; const s=(Math.abs(x)>=100?x.toFixed(0):Math.abs(x)>=10?x.toFixed(2):x.toFixed(3)).replace(/\.0+$/,''); return u?`${s} ${u}`:s; }
   const deg=(r)=>r*180/Math.PI, rad=(d)=>d*Math.PI/180;
 
-  function buildMarkdown(inp, out){
+  // Minimal IPE profile database (IPE 100 to IPE 400)
+  const IPE = [
+    {name:'IPE 100', A:13.3, I:548, h:100, b:55},
+    {name:'IPE 120', A:15.8, I:895, h:120, b:64},
+    {name:'IPE 140', A:18.1, I:1400, h:140, b:73},
+    {name:'IPE 160', A:20.9, I:2020, h:160, b:82},
+    {name:'IPE 180', A:24.1, I:2820, h:180, b:91},
+    {name:'IPE 200', A:27.6, I:3880, h:200, b:100},
+    {name:'IPE 220', A:31.5, I:5200, h:220, b:110},
+    {name:'IPE 240', A:35.8, I:6810, h:240, b:120},
+    {name:'IPE 270', A:41.3, I:9560, h:270, b:135},
+    {name:'IPE 300', A:47.4, I:12900, h:300, b:150},
+    {name:'IPE 330', A:53.8, I:16800, h:330, b:160},
+    {name:'IPE 360', A:60.9, I:21300, h:360, b:170},
+    {name:'IPE 400', A:69.5, I:27300, h:400, b:180}
+  ];
+
+  // Suggest IPE profile for bending and axial loads
+  function suggestIPE(Mmax, Nmax, E=210000, fy=235) {
+    // Mmax: kN·m, Nmax: kN, E: MPa, fy: MPa
+    // Required section modulus W = Mmax / (0.8*fy)
+    // Required area A = Nmax / (0.6*fy)
+    // IPE: I in cm^4, A in cm^2, W = I/(h/10) in cm^3
+    const Wreq = (Mmax*1e5)/(0.8*fy); // kN·m to N·mm, W in mm^3
+    const Areq = (Nmax*1e2)/(0.6*fy); // kN to N, A in mm^2
+    let best = null;
+    for(const p of IPE){
+      const W = p.I/(p.h/10); // cm^4/(cm/10) = cm^3
+      if(W*1e3 >= Wreq && p.A*1e2 >= Areq){ best = p; break; }
+    }
+    return best;
+  }
+
+  function buildMarkdown(inp, out, ipeCol, ipeRaf){
     const md=[];
     md.push("### Input\n");
     md.push("| Symbol | Description | Value |");
@@ -208,6 +241,11 @@
     md.push(`Vertical roof line load along each rafter (acting vertically):\\\n$w_v = (G+Q_s)\\, s\\, \\cos\\theta = ${fmt(inp.G+inp.S)}\\times${fmt(inp.s)}\\times\\cos(${fmt(out.theta_deg)}^{\\circ}) = ${fmt(out.wv)}\\,\\text{kN/m}$.`);
     md.push(`\nTotal vertical on one frame: $W=(G+Q_s)\\, s\\, L = ${fmt(out.W)}\\,\\text{kN}$.`);
     md.push(`\nWind resultant per frame on wall: $H=q_w\\, h\\, s = ${fmt(out.H)}\\,\\text{kN}$.`);
+    if(ipeCol||ipeRaf){
+      md.push("\n### Optimized IPE Profile Suggestions\n");
+      if(ipeCol) md.push(`Column: **${ipeCol.name}** (A=${fmt(ipeCol.A,'cm²')}, I=${fmt(ipeCol.I,'cm⁴')})`);
+      if(ipeRaf) md.push(`Rafter: **${ipeRaf.name}** (A=${fmt(ipeRaf.A,'cm²')}, I=${fmt(ipeRaf.I,'cm⁴')})`);
+    }
     return md.join("\n");
   }
 
@@ -223,6 +261,17 @@
     const W=(G+S)*s*L; // total vertical
     const H=qw*h*s;    // base shear
 
+    // Estimate max moment and axial for columns and rafters (simple statics)
+    // Rafter: max moment at midspan (approx): Mmax_r = wv*rafter*rafter/8
+    // Column: max moment at base (approx): Mmax_c = H*h/8 + W*h/(2*L)
+    // Axial: Nmax_c = W/2, Nmax_r = wv*rafter/2
+    const Mmax_r = wv*rafter*rafter/8;
+    const Nmax_r = wv*rafter/2;
+    const Mmax_c = H*h/8 + W*h/(2*L);
+    const Nmax_c = W/2;
+    const ipeRaf = suggestIPE(Mmax_r, Nmax_r);
+    const ipeCol = suggestIPE(Mmax_c, Nmax_c);
+
     k_theta.textContent=fmt(theta_deg,'°');
     k_rise.textContent=fmt(rise,'m');
     k_ridge.textContent=fmt(h_ridge,'m');
@@ -231,7 +280,7 @@
     k_W.textContent=fmt(W,'kN');
     k_H.textContent=fmt(H,'kN');
 
-    calcMD.innerHTML = marked.parse(buildMarkdown({h,L,s,G,S,qw},{theta_deg,rise,h_ridge,rafter,wv,W,H}));
+    calcMD.innerHTML = marked.parse(buildMarkdown({h,L,s,G,S,qw},{theta_deg,rise,h_ridge,rafter,wv,W,H}, ipeCol, ipeRaf));
     if(window.renderMathInElement){ renderMathInElement(calcMD, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); }
 
     // Try FEA if properties exist
