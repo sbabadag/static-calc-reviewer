@@ -2,153 +2,393 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Static Calculation Reviewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portal Frame – Geometry, Loads & AI/FEA Report</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
-  :root { --gap:12px; --radius:10px; --max:920px; font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
-  body { margin:0; background:#0b0d12; color:#e8eaf1; display:grid; place-items:start center; padding:32px;}
-  .card { width:min(100%,var(--max)); background:#141926; border:1px solid #2a3246; border-radius:var(--radius); padding:24px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
-  h1 { margin:0 0 10px; font-size:22px;}
-  label { display:block; margin:16px 0 6px; color:#aab2c8;}
-  textarea, select { width:100%; box-sizing:border-box; background:#0f1420; color:#e8eaf1; border:1px solid #2a3246; border-radius:8px; padding:10px 12px;}
-  textarea { min-height:140px; resize:vertical;}
-  .row { display:grid; grid-template-columns:1fr 1fr; gap:var(--gap);}
-  .btn { appearance:none; border:0; padding:12px 16px; border-radius:8px; cursor:pointer; font-weight:600;}
-  .primary { background:#4e7cff; color:white;} .muted{background:#20283a; color:#c7cfe2;}
-  .stack { display:grid; gap:var(--gap);} .status{ margin-top:10px; color:#aab2c8;}
-  .pill{ padding:2px 8px; border-radius:999px; font-size:12px; display:inline-block; margin-right:6px; border:1px solid #2a3246;}
-  .ok{background:#15361a;color:#7ee084;border-color:#214a29;}
-  .warning{background:#3b2e12;color:#ffd370;border-color:#55401a;}
-  .error{background:#3a1720;color:#ff8095;border-color:#53202c;}
-  .section{ border-top:1px dashed #2a3246; padding-top:16px; margin-top:16px;}
-  pre{ background:#0f1420; padding:12px; border-radius:8px; overflow:auto;}
-  .checks{ display:grid; gap:8px;}
+  :root{--bg:#0b0d12;--card:#141926;--muted:#2a3246;--text:#e8eaf1;--sub:#aab2c8;--pri:#4e7cff;--ok:#7ee084;--warn:#ffd370;--err:#ff8095;--gap:14px;--radius:14px;--w:1100px}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;display:grid;place-items:start center;padding:24px}
+  .wrap{width:min(100%,var(--w));display:grid;gap:20px}
+  header{display:flex;gap:12px;align-items:center}
+  header h1{margin:0;font-size:22px}
+  header .pill{padding:6px 10px;border:1px solid var(--muted);border-radius:999px;color:#c7cfe2}
+  .card{background:var(--card);border:1px solid var(--muted);border-radius:var(--radius);padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .grid{display:grid;gap:var(--gap)}
+  .cols{display:grid;gap:var(--gap)}
+  @media(min-width:1020px){.cols{grid-template-columns:1.2fr 0.8fr}}
+  label{font-weight:600;color:var(--sub)}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--muted);background:#0f1420;color:var(--text)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{appearance:none;border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
+  .primary{background:var(--pri);color:white}
+  .muted{background:#20283a;color:#c7cfe2}
+  .right{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+  .section{border-top:1px dashed var(--muted);margin-top:10px;padding-top:16px}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .kpi .box{background:#0f1420;border:1px solid var(--muted);border-radius:12px;padding:12px}
+  .kpi .v{font-size:20px;font-weight:800}
+  .kpi .u{color:var(--sub);font-size:12px}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .foot{color:var(--sub);font-size:12px}
+  .warn{color:var(--warn)}
+  .ok{color:var(--ok)}
+  details summary{cursor:pointer}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:820px){.two{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-  <div class="card stack">
-    <h1>🧮 Static Calculation Reviewer</h1>
-    <div class="row">
-      <div class="stack">
-        <label for="standard">Preferred standard</label>
-        <select id="standard">
-          <option>unspecified</option>
-          <option>TS500</option>
-          <option>Eurocode 3</option>
-          <option>AISC 360</option>
-          <option>EN 1992-1-1</option>
-        </select>
+<div class="wrap">
+  <header>
+    <h1>🧮 Portal Frame – Geometry, Loads & AI/FEA Report</h1>
+    <span class="pill">Units: m, kN/m², kN</span>
+  </header>
+
+  <div class="card grid">
+    <div class="cols">
+      <div class="grid">
+        <div class="row">
+          <div>
+            <label for="height">Eave height h (m)</label>
+            <input id="height" type="number" step="0.01" placeholder="6.0" />
+          </div>
+          <div>
+            <label for="span">Span L (m)</label>
+            <input id="span" type="number" step="0.01" placeholder="20.0" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="bay">Bay length / spacing s (m)</label>
+            <input id="bay" type="number" step="0.01" placeholder="6.0" />
+          </div>
+          <div>
+            <label>Roof slope</label>
+            <div style="display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:center">
+              <input id="slopeVal" type="number" step="0.1" placeholder="10" />
+              <select id="slopeUnit"><option value="pct">% (per 100)</option><option value="deg">degrees (°)</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="g">Dead load G (kN/m²)</label>
+            <input id="g" type="number" step="0.01" placeholder="0.60" />
+          </div>
+          <div>
+            <label for="sload">Snow load Qs (kN/m²)</label>
+            <input id="sload" type="number" step="0.01" placeholder="0.75" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="wload">Wind pressure on wall qw (kN/m²)</label>
+            <input id="wload" type="number" step="0.01" placeholder="0.50" />
+          </div>
+          <div>
+            <label for="comb">Design combo</label>
+            <select id="comb"><option value="ec">Eurocode: 1.35G + 1.5Q (vertical), wind separate</option><option value="as">Service: G + Q, wind separate</option></select>
+          </div>
+        </div>
+
+        <details class="section">
+          <summary><strong>Member properties (for FEA)</strong> <span class="foot">(optional, default steel S235: E=210 GPa; set A, I)</span></summary>
+          <div class="two">
+            <div>
+              <h4>Columns</h4>
+              <label for="Ec">E (GPa)</label>
+              <input id="Ec" type="number" step="1" value="210" />
+              <label for="Ac">Area A (cm²)</label>
+              <input id="Ac" type="number" step="0.1" placeholder="e.g. 41.2 (HEB 160)" />
+              <label for="Ic">Inertia I (cm⁴)</label>
+              <input id="Ic" type="number" step="1" placeholder="e.g. 2680 (HEB 160 about strong axis)" />
+            </div>
+            <div>
+              <h4>Rafters</h4>
+              <label for="Er">E (GPa)</label>
+              <input id="Er" type="number" step="1" value="210" />
+              <label for="Ar">Area A (cm²)</label>
+              <input id="Ar" type="number" step="0.1" placeholder="e.g. 35.1 (IPE 300)" />
+              <label for="Ir">Inertia I (cm⁴)</label>
+              <input id="Ir" type="number" step="1" placeholder="e.g. 5400 (IPE 300 strong axis)" />
+            </div>
+          </div>
+        </details>
+
+        <div class="right">
+          <button class="btn muted" id="sample">Load sample</button>
+          <button class="btn primary" id="calc">Compute geometry & loads</button>
+          <button class="btn" onclick="window.print()">Print / PDF</button>
+        </div>
+        <small class="foot">This tool computes geometry, equivalent loads, and a simple <strong>linear-elastic portal-frame analysis</strong> (plane-frame elements, fixed bases). For a narrative report, you can also call your AI Worker (ChatGPT API) below.</small>
       </div>
-      <div class="stack">
-        <label for="worker">Your Worker URL</label>
-        <input id="worker" placeholder="https://your-subdomain.workers.dev" />
-      </div>
-    </div>
 
-    <label for="problem">Problem</label>
-    <textarea id="problem" placeholder="Beam L=6 m, w=5+3 kN/m, IPE270 S275, check strength & deflection per EC3."></textarea>
-
-    <label for="code">Optional equations / calc steps / code</label>
-    <textarea id="code" placeholder="(Optional)"></textarea>
-
-    <div class="row">
-      <button class="btn primary" id="submit">Review</button>
-      <button class="btn muted" id="sample">Load sample</button>
-    </div>
-    <div id="status" class="status"></div>
-
-    <div id="out" class="section" hidden>
-      <h3 id="title"></h3>
-      <p id="summary"></p>
-
-      <div class="section">
-        <h4>Assumptions</h4>
-        <ul id="assumptions"></ul>
-      </div>
-
-      <div class="section">
-        <h4>Checklist</h4>
-        <div id="checks" class="checks"></div>
-      </div>
-
-      <div class="section" id="issuesWrap" hidden>
-        <h4>Issues</h4>
-        <ul id="issues"></ul>
-      </div>
-
-      <div class="section" id="recsWrap" hidden>
-        <h4>Recommendations</h4>
-        <ul id="recs"></ul>
-      </div>
-
-      <div class="section">
-        <h4>Full report (Markdown)</h4>
-        <div id="md"></div>
-      </div>
-
-      <div class="section">
-        <small id="disc"></small>
+      <div class="grid">
+        <div class="kpi">
+          <div class="box"><div class="u">Roof angle θ</div><div class="v" id="k_theta">–</div></div>
+          <div class="box"><div class="u">Rise to ridge</div><div class="v" id="k_rise">–</div></div>
+          <div class="box"><div class="u">Ridge height</div><div class="v" id="k_ridge">–</div></div>
+          <div class="box"><div class="u">Rafter length (half)</div><div class="v" id="k_rafter">–</div></div>
+          <div class="box"><div class="u">Rafter line load</div><div class="v" id="k_wr">–</div><div class="u">kN/m (G+S, vertical)</div></div>
+          <div class="box"><div class="u">Total vertical (frame)</div><div class="v" id="k_W">–</div><div class="u">kN</div></div>
+          <div class="box"><div class="u">Base shear (wind)</div><div class="v" id="k_H">–</div><div class="u">kN</div></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    const $ = (id) => document.getElementById(id);
-    $("sample").onclick = () => {
-      $("problem").value = "Simply supported steel beam, L=6.0 m. Dead=5 kN/m, Live=3 kN/m. IPE270 S275. Check strength & deflection.";
-      $("standard").value = "Eurocode 3";
+  <div class="card">
+    <h3>Detailed Calculations</h3>
+    <div id="calcMD" class="mono"></div>
+  </div>
+
+  <div class="card">
+    <h3>FEA Results (Linear Elastic, 2D Frame)</h3>
+    <div id="feaOut" class="mono">Run geometry first.</div>
+  </div>
+
+  <div class="card">
+    <h3>AI Report (ChatGPT API via Worker)</h3>
+    <div class="row">
+      <div>
+        <label for="worker">Worker URL</label>
+        <input id="worker" placeholder="https://your-subdomain.workers.dev" />
+      </div>
+      <div>
+        <label for="standard">Preferred standard</label>
+        <select id="standard"><option>unspecified</option><option>TS500</option><option>Eurocode 3</option><option>AISC 360</option><option>EN 1992-1-1</option></select>
+      </div>
+    </div>
+    <div class="right">
+      <button class="btn primary" id="aiBtn">Generate AI Report</button>
+    </div>
+    <div id="aiStatus" class="foot"></div>
+    <div id="aiReport" class="mono section"></div>
+  </div>
+
+  <div class="card">
+    <h3>Notes & Assumptions</h3>
+    <ul class="foot">
+      <li>Symmetric single-bay portal frame; nodes: fixed bases, eaves, ridge.</li>
+      <li>Roof loads (G+snow) act vertically on plan area; converted to rafter line loads.</li>
+      <li>Wind pressure treated on wall only (roof uplift not included).</li>
+      <li>FEA: small-deflection, prismatic members, no P-Δ, no shear deformation, plane frame (u,v,θ per node).</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  const $ = (id)=>document.getElementById(id);
+  function toN(el){ const v=parseFloat(el.value); return isFinite(v)?v:NaN; }
+  function fmt(x,u=""){ if(!isFinite(x)) return "–"; const s=(Math.abs(x)>=100?x.toFixed(0):Math.abs(x)>=10?x.toFixed(2):x.toFixed(3)).replace(/\.0+$/,''); return u?`${s} ${u}`:s; }
+  const deg=(r)=>r*180/Math.PI, rad=(d)=>d*Math.PI/180;
+
+  function buildMarkdown(inp, out){
+    const md=[];
+    md.push("### Input\n");
+    md.push("| Symbol | Description | Value |");
+    md.push("|---:|---|---:|");
+    md.push(`| h | Eave height | ${fmt(inp.h,'m')} |`);
+    md.push(`| L | Span | ${fmt(inp.L,'m')} |`);
+    md.push(`| s | Bay length | ${fmt(inp.s,'m')} |`);
+    md.push(`| θ | Roof angle | ${fmt(out.theta_deg,'°')} |`);
+    md.push(`| G | Dead load | ${fmt(inp.G,'kN/m²')} |`);
+    md.push(`| Q_s | Snow | ${fmt(inp.S,'kN/m²')} |`);
+    md.push(`| q_w | Wind on wall | ${fmt(inp.qw,'kN/m²')} |`);
+    md.push("\n### Geometry\n");
+    md.push(`Half-span $= L/2 = ${fmt(inp.L/2)}\\,\\text{m}$`);
+    md.push(`\\[ r = (L/2)\\tan\\theta = ${fmt(out.rise)}\\,\\text{m}, \\quad h_\\text{ridge}=h+r=${fmt(out.h_ridge)}\\,\\text{m} \\]`);
+    md.push(`Rafter half length $\\ell = (L/2)/\\cos\\theta = ${fmt(out.rafter)}\\,\\text{m}$`);
+    md.push("\n### Loads\n");
+    md.push(`Vertical roof line load along each rafter (acting vertically):\\\n$w_v = (G+Q_s)\\, s\\, \\cos\\theta = ${fmt(inp.G+inp.S)}\\times${fmt(inp.s)}\\times\\cos(${fmt(out.theta_deg)}^\\u{00B0}) = ${fmt(out.wv)}\\,\\text{kN/m}$.`);
+    md.push(`\nTotal vertical on one frame: $W=(G+Q_s)\\, s\\, L = ${fmt(out.W)}\\,\\text{kN}$.`);
+    md.push(`\nWind resultant per frame on wall: $H=q_w\\, h\\, s = ${fmt(out.H)}\\,\\text{kN}$.`);
+    return md.join("\n");
+  }
+
+  function compute(){
+    const h=toN(height), L=toN(span), s=toN(bay), G=toN(g), S=toN(sload), qw=toN(wload);
+    const slope = toN(slopeVal), slopeU=slopeUnit.value;
+    const missing=[]; if(!isFinite(h))missing.push('h'); if(!isFinite(L))missing.push('L'); if(!isFinite(s))missing.push('s'); if(!isFinite(G))missing.push('G'); if(!isFinite(S))missing.push('Q_s'); if(!isFinite(qw))missing.push('q_w'); if(!isFinite(slope))missing.push('slope');
+    if(missing.length){ alert('Fill: '+missing.join(', ')); return; }
+    const theta = slopeU==='deg'? rad(slope) : Math.atan(slope/100);
+    const theta_deg = deg(theta);
+    const rise=(L/2)*Math.tan(theta), h_ridge=h+rise, rafter=(L/2)/Math.cos(theta);
+    const wv=(G+S)*s*Math.cos(theta); // vertical line load per rafter (kN/m)
+    const W=(G+S)*s*L; // total vertical
+    const H=qw*h*s;    // base shear
+
+    k_theta.textContent=fmt(theta_deg,'°');
+    k_rise.textContent=fmt(rise,'m');
+    k_ridge.textContent=fmt(h_ridge,'m');
+    k_rafter.textContent=fmt(rafter,'m');
+    k_wr.textContent=fmt(wv,'kN/m');
+    k_W.textContent=fmt(W,'kN');
+    k_H.textContent=fmt(H,'kN');
+
+    calcMD.innerHTML = marked.parse(buildMarkdown({h,L,s,G,S,qw},{theta_deg,rise,h_ridge,rafter,wv,W,H}));
+    if(window.renderMathInElement){ renderMathInElement(calcMD, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); }
+
+    // Try FEA if properties exist
+    runFEA({h,L,s,theta,rafter,wv,H});
+  }
+
+  function runFEA({h,L,theta,rafter,wv,H}){
+    // Simple 2D frame (linear elastic) with 5 nodes: 0 base left (0,0), 1 eave left (0,h), 2 ridge (L/2,h+rise), 3 eave right (L,h), 4 base right (L,0)
+    // Members: [0-1] column, [1-2] rafter, [2-3] rafter, [3-4] column. Fixed bases (0,4).
+    // Requires E (GPa), A (cm^2), I (cm^4) for columns & rafters.
+    const EcG=toN(Ec)||210, ErG=toN(Er)||210;
+    const Ac=toN(Ac), Ic=toN(Ic), Ar=toN(Ar), Ir=toN(Ir);
+    if(!(Ac>0&&Ic>0&&Ar>0&&Ir>0)){ feaOut.textContent = 'Enter member properties (A, I) to run FEA.'; return; }
+    // Convert: GPa->kN/m² (1 GPa=10^6 kN/m²), cm²->m², cm⁴->m⁴
+    const Ecol=EcG*1e6, Era=ErG*1e6, Ac_m=Ac*1e-4, Ic_m=Ic*1e-8, Ar_m=Ar*1e-4, Ir_m=Ir*1e-8;
+
+    const rise=(L/2)*Math.tan(theta);
+    const nodes=[ [0,0], [0,h], [L/2,h+rise], [L,h], [L,0] ];
+    const els=[
+      {i:0,j:1,E:Ecol,A:Ac_m,I:Ic_m},
+      {i:1,j:2,E:Era ,A:Ar_m,I:Ir_m},
+      {i:2,j:3,E:Era ,A:Ar_m,I:Ir_m},
+      {i:3,j:4,E:Ecol,A:Ac_m,I:Ic_m},
+    ];
+
+    const ndof=3*nodes.length; // ux, uy, rz
+    const K=Array.from({length:ndof},()=>Array(ndof).fill(0));
+    const F=Array(ndof).fill(0);
+
+    function add(i,j,v){ K[i][j]+=v; }
+
+    function elAssembly(e){
+      const xi=nodes[e.i][0], yi=nodes[e.i][1], xj=nodes[e.j][0], yj=nodes[e.j][1];
+      const dx=xj-xi, dy=yj-yi, Lm=Math.hypot(dx,dy), c=dx/Lm, s=dy/Lm;
+      const A=e.A, E=e.E, I=e.I, L2=Lm*Lm, L3=L2*Lm;
+      const k = [
+        [ A*E/Lm, 0, 0, -A*E/Lm, 0, 0 ],
+        [ 0, 12*E*I/L3, 6*E*I/L2, 0, -12*E*I/L3, 6*E*I/L2 ],
+        [ 0, 6*E*I/L2, 4*E*I/Lm, 0, -6*E*I/L2, 2*E*I/Lm ],
+        [ -A*E/Lm, 0, 0, A*E/Lm, 0, 0 ],
+        [ 0, -12*E*I/L3, -6*E*I/L2, 0, 12*E*I/L3, -6*E*I/L2 ],
+        [ 0, 6*E*I/L2, 2*E*I/Lm, 0, -6*E*I/L2, 4*E*I/Lm ],
+      ];
+      const T=[
+        [ c, s, 0, 0, 0, 0 ],
+        [ -s, c, 0, 0, 0, 0 ],
+        [ 0, 0, 1, 0, 0, 0 ],
+        [ 0, 0, 0, c, s, 0 ],
+        [ 0, 0, 0, -s, c, 0 ],
+        [ 0, 0, 0, 0, 0, 1 ],
+      ];
+      // Kg = T^T k T
+      function matMul(a,b){const r=a.length,c=b[0].length,n=b.length;const out=Array.from({length:r},()=>Array(c).fill(0));for(let i=0;i<r;i++)for(let j=0;j<c;j++){let s=0;for(let t=0;t<n;t++)s+=a[i][t]*b[t][j];out[i][j]=s;}return out;}
+      function trans(a){const r=a.length,c=a[0].length;const out=Array.from({length:c},()=>Array(r).fill(0));for(let i=0;i<r;i++)for(let j=0;j<c;j++)out[j][i]=a[i][j];return out;}
+      const Kg = matMul(trans(T), matMul(k, T));
+      const dof=[ 3*e.i,3*e.i+1,3*e.i+2, 3*e.j,3*e.j+1,3*e.j+2 ];
+      for(let a=0;a<6;a++) for(let b=0;b<6;b++) add(dof[a],dof[b],Kg[a][b]);
+      return {Lm,c,s,dof,T,k};
+    }
+
+    const meta = els.map(elAssembly);
+
+    // Loads: vertical uniform on rafters as equivalent local qy; wind H as lateral nodal loads at eaves (split equally)
+    // Rafter elements are index 1 and 2 in 'els'
+    // Uniform vertical load wv (kN/m) along rafters -> project to local qy = wv * cos(theta)
+    const qy = wv * Math.cos(theta);
+    [1,2].forEach(ei=>{
+      const m=meta[ei]; const Lm=m.Lm; const q=qy; // fixed-end forces for uniform local q in +y
+      const fe_local=[0, q*Lm/2, q*Lm*Lm/12, 0, q*Lm/2, -q*Lm*Lm/12];
+      // f_global = T^T * fe_local
+      function trans(a){const r=a.length,c=a[0].length;const out=Array.from({length:c},()=>Array(r).fill(0));for(let i=0;i<r;i++)for(let j=0;j<c;j++)out[j][i]=a[i][j];return out;}
+      const TT=trans(m.T); const fg=new Array(6).fill(0);
+      for(let i=0;i<6;i++) for(let j=0;j<6;j++) fg[i]+=TT[i][j]*fe_local[j];
+      const dof=m.dof; for(let i=0;i<6;i++) F[dof[i]]+=fg[i];
+    });
+
+    // Wind H -> lateral point loads at eaves (nodes 1 and 3)
+    F[3*1+0] += H/2; // node 1 ux
+    F[3*3+0] += H/2; // node 3 ux
+
+    // Boundary conditions: nodes 0 & 4 fixed
+    const ndof=K.length; // already set
+    const restrained=new Set([0,1,2, 12,13,14]);
+    const free=[]; for(let i=0;i<ndof;i++) if(!restrained.has(i)) free.push(i);
+
+    function extract(mat, idx){const n=idx.length;const out=Array.from({length:n},()=>Array(n).fill(0));for(let i=0;i<n;i++) for(let j=0;j<n;j++) out[i][j]=mat[idx[i]][idx[j]];return out}
+    function extractVec(vec, idx){const out=[]; for(const i of idx) out.push(vec[i]); return out;}
+    const Kff=extract(K,free), Ff=extractVec(F,free);
+
+    function solve(A,b){const n=A.length;const M=A.map(r=>r.slice());const x=new Array(n).fill(0);const B=b.slice();for(let k=0;k<n;k++){let iMax=k,vMax=Math.abs(M[k][k]);for(let i=k+1;i<n;i++){const v=Math.abs(M[i][k]);if(v>vMax){vMax=v;iMax=i}}if(vMax<1e-12) throw new Error('Singular K');if(iMax!==k){[M[k],M[iMax]]=[M[iMax],M[k]];[B[k],B[iMax]]=[B[iMax],B[k]]}const piv=M[k][k];for(let j=k;j<n;j++) M[k][j]/=piv; B[k]/=piv;for(let i=0;i<n;i++) if(i!==k){const f=M[i][k]; if(Math.abs(f)>0){ for(let j=k;j<n;j++) M[i][j]-=f*M[k][j]; B[i]-=f*B[k]; }}}for(let i=0;i<n;i++) x[i]=B[i]; return x;}
+
+    let df; try{ df=solve(Kff,Ff);}catch(e){ feaOut.textContent='FEA failed: '+e.message; return; }
+    const d=Array(K.length).fill(0); for(let i=0;i<free.length;i++) d[free[i]]=df[i];
+
+    function vecMul(A,x){const n=A.length,m=x.length;const y=new Array(n).fill(0);for(let i=0;i<n;i++){let s=0;for(let j=0;j<m;j++) s+=A[i][j]*x[j]; y[i]=s;} return y;}
+    function trans(a){const r=a.length,c=a[0].length;const out=Array.from({length:c},()=>Array(r).fill(0));for(let i=0;i<r;i++)for(let j=0;j<c;j++)out[j][i]=a[i][j];return out;}
+    const results=[];
+    meta.forEach((m,ei)=>{
+      const dof=m.dof; const de_gl = [d[dof[0]],d[dof[1]],d[dof[2]],d[dof[3]],d[dof[4]],d[dof[5]]];
+      const de_loc = vecMul(m.T, de_gl);
+      let fe_local=[0,0,0,0,0,0];
+      if(ei===1||ei===2){ const q=qy, Lm=m.Lm; fe_local=[0, q*Lm/2, q*Lm*Lm/12, 0, q*Lm/2, -q*Lm*Lm/12]; }
+      const el_forces = vecMul(m.k, de_loc).map((v,i)=>v - fe_local[i]);
+      results.push({ei, L:m.Lm, Ni:el_forces[0], Vi:el_forces[1], Mi:el_forces[2], Nj:el_forces[3], Vj:el_forces[4], Mj:el_forces[5]});
+    });
+
+    const R=[]; for(let i=0;i<K.length;i++){ let s=0; for(let j=0;j<K.length;j++) s+=K[i][j]*d[j]; R[i]=s - F[i]; }
+
+    function row(o,name){ return `<tr><td>${name}</td><td>${fmt(o.Ni)}</td><td>${fmt(o.Vi)}</td><td>${fmt(o.Mi)}</td><td>${fmt(o.Nj)}</td><td>${fmt(o.Vj)}</td><td>${fmt(o.Mj)}</td></tr>`; }
+    let html="<div class='foot'>Sign convention: local +y upward; +M counter-clockwise. Units: kN, m.</div>";
+    html += "<table style='width:100%;border-collapse:collapse;margin-top:8px'>"+
+            "<tr><th align='left'>Member</th><th>Ni (kN)</th><th>Vi (kN)</th><th>Mi (kN·m)</th><th>Nj</th><th>Vj</th><th>Mj</th></tr>"+
+            results.map((r,i)=>row(r, ['Col L','Rafter L','Rafter R','Col R'][i])).join("")+"</table>";
+    function nd(i){ return {ux:d[3*i+0], uy:d[3*i+1], rz:d[3*i+2]}; }
+    const n1=nd(1), n2=nd(2), n3=nd(3);
+    html += `<div class='section'><b>Key node displacements</b> (m, rad):<br>`+
+      `Left eave: ux=${fmt(n1.ux)}, uy=${fmt(n1.uy)}, θ=${fmt(n1.rz)}<br>`+
+      `Ridge: ux=${fmt(n2.ux)}, uy=${fmt(n2.uy)}, θ=${fmt(n2.rz)}<br>`+
+      `Right eave: ux=${fmt(n3.ux)}, uy=${fmt(n3.uy)}, θ=${fmt(n3.rz)}</div>`;
+    const R0={Fx:R[0], Fy:R[1], M:R[2]}, R4={Fx:R[12], Fy:R[13], M:R[14]};
+    html += `<div class='section'><b>Base reactions</b> (kN, kN·m):<br>`+
+      `Left base: Fx=${fmt(R0.Fx)}, Fy=${fmt(R0.Fy)}, M=${fmt(R0.M)}<br>`+
+      `Right base: Fx=${fmt(R4.Fx)}, Fy=${fmt(R4.Fy)}, M=${fmt(R4.M)}</div>`;
+
+    feaOut.innerHTML = html;
+  }
+
+  aiBtn.addEventListener('click', async ()=>{
+    const url=worker.value.trim(); if(!url){ aiStatus.textContent='Enter Worker URL'; return; }
+    const body={
+      problem_text: `Portal frame with inputs: h=${height.value} m, L=${span.value} m, s=${bay.value} m, slope=${slopeVal.value} ${slopeUnit.value}, G=${g.value} kN/m², Q_s=${sload.value} kN/m², q_w=${wload.value} kN/m². Include a step-by-step stiffness-based FEA summary for member end forces and node displacements using the computed loads.`,
+      code_block: document.getElementById('calcMD').innerText,
+      standard: standard.value
     };
+    aiStatus.textContent='Requesting AI report…'; aiReport.innerHTML='';
+    try{
+      const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+      const data = await res.json();
+      if(!res.ok){ aiStatus.textContent = 'AI error: '+(data.error||res.status); return; }
+      const md = `# ${data.title||'AI Report'}\n\n`+
+                 `${data.summary||''}\n\n`+
+                 `## Assumptions\n`+ (data.assumptions||[]).map(x=>`- ${x}`).join('\n')+`\n\n`+
+                 `## Checks\n`+ (data.checks||[]).map(c=>`- **${c.name}** — ${c.status}: ${c.detail}`).join('\n')+`\n\n`+
+                 (data.calc_markdown?`## Detailed Calculations\n${data.calc_markdown}\n\n`:``)+
+                 `## Recommendations\n`+ (data.recommendations||[]).map(x=>`- ${x}`).join('\n')+`\n\n`+
+                 `---\n${data.disclaimer||''}`;
+      aiReport.innerHTML = marked.parse(md);
+      if(window.renderMathInElement){ renderMathInElement(aiReport, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]}); }
+      aiStatus.textContent='Done.';
+    }catch(e){ aiStatus.textContent='Fetch failed: '+e.message; }
+  });
 
-    $("submit").onclick = async () => {
-      const url = $("worker").value.trim(); // your Worker endpoint
-      const body = {
-        problem_text: $("problem").value,
-        code_block: $("code").value,
-        standard: $("standard").value
-      };
-
-      $("status").textContent = "Analyzing…";
-      $("out").hidden = true;
-
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(body)
-        });
-        if (!res.ok) throw new Error("Server error: " + res.status);
-        const data = await res.json();
-
-        $("title").textContent = data.title || "";
-        $("summary").textContent = data.summary || "";
-
-        $("assumptions").innerHTML = (data.assumptions || []).map(a => `<li>${a}</li>`).join("");
-        $("checks").innerHTML = (data.checks || []).map(c =>
-          `<div class="pill ${c.status}">${c.status}</div> <strong>${c.name}</strong> — ${c.detail}`
-        ).join("<br>");
-
-        if (data.issues?.length) {
-          $("issuesWrap").hidden = false;
-          $("issues").innerHTML = data.issues.map(i => `<li>${i}</li>`).join("");
-        } else { $("issuesWrap").hidden = true; }
-
-        if (data.recommendations?.length) {
-          $("recsWrap").hidden = false;
-          $("recs").innerHTML = data.recommendations.map(r => `<li>${r}</li>`).join("");
-        } else { $("recsWrap").hidden = true; }
-
-        $("md").innerHTML = window.marked ? marked.parse(data.formatted_markdown || "") :
-                           `<pre>${data.formatted_markdown || ""}</pre>`;
-        $("disc").textContent = data.disclaimer || "";
-
-        $("status").textContent = "Done.";
-        $("out").hidden = false;
-      } catch (e) {
-        $("status").textContent = e.message;
-      }
-    };
-  </script>
+  calc.addEventListener('click', compute);
+  sample.addEventListener('click', ()=>{
+    height.value=6; span.value=20; bay.value=6; slopeVal.value=10; slopeUnit.value='pct'; g.value=0.60; sload.value=0.75; wload.value=0.50; comb.value='ec';
+    Ec.value=210; Ac.value=41.2; Ic.value=2680; Er.value=210; Ar.value=35.1; Ir.value=5400;
+  });
+</script>
 </body>
 </html>
