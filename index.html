@@ -313,7 +313,7 @@
     F[3*3+0] += H/2; // node 3 ux
 
     // Boundary conditions: nodes 0 & 4 fixed
-    const ndof=K.length; // already set
+    // ndof already defined earlier (3*nodes.length); avoid redeclaration
     const restrained=new Set([0,1,2, 12,13,14]);
     const free=[]; for(let i=0;i<ndof;i++) if(!restrained.has(i)) free.push(i);
 
