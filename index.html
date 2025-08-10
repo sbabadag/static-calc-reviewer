@@ -207,16 +207,25 @@
 
   // Suggest IPE profile for bending and axial loads
   function suggestIPE(Mmax, Nmax, E=210000, fy=235) {
+    // Eurocode 3: Wpl,req = MEd / fyd, Areq = NEd / fyd
     // Mmax: kN·m, Nmax: kN, E: MPa, fy: MPa
-    // Required section modulus W = Mmax / (0.8*fy)
-    // Required area A = Nmax / (0.6*fy)
-    // IPE: I in cm^4, A in cm^2, W = I/(h/10) in cm^3
-    const Wreq = (Mmax*1e5)/(0.8*fy); // kN·m to N·mm, W in mm^3
-    const Areq = (Nmax*1e2)/(0.6*fy); // kN to N, A in mm^2
+    // γM0 = 1.1, fyd = fy/γM0
+    const gammaM0 = 1.1;
+    const fyd = fy / gammaM0; // MPa
+    // Convert Mmax to N·mm, Nmax to N
+    const MEd = Mmax * 1e6; // kN·m to N·mm
+    const NEd = Nmax * 1e3; // kN to N
+    // Required section modulus in mm³
+    const Wreq = MEd / fyd;
+    // Required area in mm²
+    const Areq = NEd / fyd;
     let best = null;
     for(const p of IPE){
-      const W = p.I/(p.h/10); // cm^4/(cm/10) = cm^3
-      if(W*1e3 >= Wreq && p.A*1e2 >= Areq){ best = p; break; }
+      // I in cm^4, h in mm, W = I/(h/10) in cm^3
+      const Wcm3 = p.I/(p.h/10); // cm^3
+      const Wmm3 = Wcm3 * 1000; // mm^3
+      const Amm2 = p.A * 100; // cm^2 to mm^2
+      if(Wmm3 >= Wreq && Amm2 >= Areq){ best = p; break; }
     }
     return best;
   }
